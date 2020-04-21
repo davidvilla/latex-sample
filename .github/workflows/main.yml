@@ -1,38 +1,38 @@
-name: compile
-
 on: [push]
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  latex-job:
+  compile:
     runs-on: ubuntu-latest
-    name: A job to Compile Latex file
+    name: compile latex document
     steps:
-    - uses: actions/checkout@v1
-    - name: Compilation
-      uses: vinay0410/tectonic-action@master
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tex_path: 'main.tex'
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-          tag_name: pdf
-          release_name: pdf
-          draft: false
-          prerelease: false
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./main.pdf
-          asset_name: main.pdf
-          asset_content_type: application/pdf
+      - uses: actions/checkout@v2
         
+      - name: login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        
+      - name: latex compile
+        run: docker run -v$PWD:/host -w /host docker.pkg.github.com/uclm-arco/arco-authors/arco-authors:latest make -f /usr/include/arco/latex.mk
+      
+      - name: create release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            tag_name: pdf
+            release_name: pdf
+            draft: false
+            prerelease: false
+
+      - name: upload release asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            upload_url: ${{ steps.create_release.outputs.upload_url }} 
+            asset_path: ./main.pdf
+            asset_name: main.pdf
+            asset_content_type: application/pdf
